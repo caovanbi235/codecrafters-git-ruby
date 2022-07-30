@@ -20,6 +20,17 @@ when "cat-file"
   store = Zlib::Inflate.inflate(cstr)
   header, content = store.split("\0")
   print content.strip
+when "hash-object"
+  file = ARGV[2]
+  content = File.read(file)
+  header = "blob #{content.length}\0"
+  store = header + content
+  sha1 = Digest::SHA1.hexdigest(store)
+  zlib_content = Zlib::Deflate.deflate(store)
+  path = ".git/objects/#{sha1[0,2]}/#{sha1[2,38]}"
+  Dir.mkdir(File.dirname(path))
+  File.open(path, "w") { |f| f.write(zlib_content) }
+  print sha1
 else
   raise RuntimeError.new("Unknown command #{command}")
 end
