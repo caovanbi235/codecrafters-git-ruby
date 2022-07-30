@@ -1,7 +1,7 @@
 require 'digest/sha1'
 require 'zlib'
 # You can use print statements as follows for debugging, they'll be visible when running tests.
-puts "Logs from your program will appear here!"
+# puts "Logs from your program will appear here!"
 
 # Uncomment this block to pass the first stage
 #
@@ -17,7 +17,9 @@ when "cat-file"
   object_hash = ARGV[2]
   path = ".git/objects/#{object_hash[0,2]}/#{object_hash[2,38]}"
   cstr = File.read(path)
-  puts Zlib::Inflate.inflate(cstr).split("\0")[1]
+  store = Zlib::Inflate.inflate(cstr)
+  header, content = store.split("\0")
+  puts content.chop
 else
   raise RuntimeError.new("Unknown command #{command}")
 end
