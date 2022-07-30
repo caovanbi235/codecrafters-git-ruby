@@ -19,7 +19,7 @@ when "cat-file"
   cstr = File.read(path)
   store = Zlib::Inflate.inflate(cstr)
   header, content = store.split("\0")
-  puts content.chomp
+  puts content.strip
 else
   raise RuntimeError.new("Unknown command #{command}")
 end
