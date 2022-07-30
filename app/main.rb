@@ -17,7 +17,7 @@ when "cat-file"
   object_hash = ARGV[2]
   path = ".git/objects/#{object_hash[0,2]}/#{object_hash[2,38]}"
   cstr = File.read(path)
-  puts Zlib::Inflate.inflate(cstr)
+  puts Zlib::Inflate.inflate(cstr).split("\0")[1]
 else
   raise RuntimeError.new("Unknown command #{command}")
 end
