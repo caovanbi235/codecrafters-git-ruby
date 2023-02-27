@@ -34,10 +34,12 @@ when "ls-tree"
   header, contents = decompress_content.split(/\0/, 2)
   contents = contents.split(/\s/)[1..]
 
-  result = contents.map do |content|
-	content.split(/\0/).first
-  end.sort
-  puts result 
+  results = []
+  contents.each do |content|
+    result = content.split(/\0/).first
+    results << result if result.ascii_only?
+  end
+  puts results.sort
 else
   raise RuntimeError.new("Unknown command #{command}")
 end
