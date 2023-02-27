@@ -12,13 +12,14 @@ when "init"
   File.write(".git/HEAD", "ref: refs/heads/master\n")
   puts "Initialized git directory"
 when "cat-file"
-  object_hash = ARGV[2]
-  path = ".git/objects/#{object_hash[...2]}/#{object_hash[2..]}"
-  store = Zlib::Inflate.inflate(File.read(path))
-  header, content = store.split("\0")
+  blob_sha = ARGV[2]
+  path = ".git/objects/#{blob_sha[...2]}/#{blob_sha[2..]}"
+  decompress_content = Zlib::Inflate.inflate(File.read(path))
+  header, content = decompress_content.split(/\0/)
   print content.strip
 when "hash-object"
-  content = File.read(ARGV[2])
+  file = ARGV[2]
+  content = File.read(file)
   store = "blob #{content.length}\0#{content}"
   sha1 = Digest::SHA1.hexdigest(store)
   path = ".git/objects/#{sha1[...2]}/#{sha1[2..]}"
@@ -26,6 +27,17 @@ when "hash-object"
   compress_content = Zlib::Deflate.deflate(store)
   File.open(path, "w") { |f| f.write(compress_content) }
   print sha1
+when "ls-tree"
+  tree_sha = ARGV[2]
+  path = ".git/objects/#{tree_sha[...2]}/#{tree_sha[2..]}"
+  decompress_content = Zlib::Inflate.inflate(File.read(path)) 
+  header, contents = decompress_content.split(/\0/, 2)
+  contents = contents.split(/\s/)[1..]
+
+  result = contents.map do |content|
+	content.split(/\0/).first
+  end.sort
+  puts result 
 else
   raise RuntimeError.new("Unknown command #{command}")
 end
