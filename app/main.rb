@@ -2,7 +2,7 @@ require 'digest/sha1'
 require 'zlib'
 require 'fileutils'
 
-def compresse_and_write_file(type, file)
+def compress_and_write_file(type, file)
   origin = "#{type} #{file.length}\0#{file}"
   compressed_content = Zlib::Deflate.deflate(origin)
   sha1 = Digest::SHA1.hexdigest(origin)
@@ -12,12 +12,17 @@ def compresse_and_write_file(type, file)
   sha1
 end
 
+def uncompress_from_sha1(sha1)
+  path = ".git/objects/#{sha1[...2]}/#{sha1[2..]}"
+  uncompressed_content = Zlib::Inflate.inflate(File.read(path))
+  uncompressed_content.split(/\0/, 2)
+end
+
 def write_tree_object(dir)
   tree_entries = ""
   dir_children = Dir.children(dir).sort
   dir_children.each do |f|
     next if f.start_with?(".")
-    #p f
     path = "#{dir}/#{f}"
     if FileTest.directory?(path)
       binaries = [write_tree_object(path)].pack("H*")
@@ -27,11 +32,11 @@ def write_tree_object(dir)
       tree_entries << "100644 #{File.basename(path)}\0#{binaries}"
     end
   end
-  compresse_and_write_file("tree", tree_entries) 
+  compress_and_write_file("tree", tree_entries) 
 end
 
 def write_blob_object(f)
-  compresse_and_write_file("blob", File.read(f)) 
+  compress_and_write_file("blob", File.read(f)) 
 end
 
 command = ARGV[0]
@@ -43,20 +48,12 @@ when "init"
   File.write(".git/HEAD", "ref: refs/heads/master\n")
   puts "Initialized git directory"
 when "cat-file"
-  blob_sha = ARGV[2]
-  path = ".git/objects/#{blob_sha[...2]}/#{blob_sha[2..]}"
-  uncompressed_content = Zlib::Inflate.inflate(File.read(path))
-  header, content = uncompressed_content.split(/\0/)
-  print content.strip
+  print uncompress_from_sha1(ARGV[2]).last.strip
 when "hash-object"
   print write_blob_object(ARGV[2])
 when "ls-tree"
-  tree_sha = ARGV[2]
-  path = ".git/objects/#{tree_sha[...2]}/#{tree_sha[2..]}"
-  uncompressed_content = Zlib::Inflate.inflate(File.read(path)) 
-  header, contents = uncompressed_content.split(/\0/, 2)
+  header, contents = uncompress_from_sha1(ARGV[2])
   contents = contents.split(" ")[1..]
-
   results = []
   contents.each do |content|
     result = content.split(/\0/).first
@@ -64,7 +61,7 @@ when "ls-tree"
   end
   puts results.sort
 when "write-tree"
-  print write_tree_object(Dir.pwd).split(/\0/).last
+  print write_tree_object(Dir.pwd)
 else
   raise RuntimeError.new("Unknown command #{command}")
 end
